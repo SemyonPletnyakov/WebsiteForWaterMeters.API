@@ -87,12 +87,16 @@ namespace WebsiteForWaterMeters.API.Services
                 Check check = bd.Checks.FirstOrDefault(c => c.LS == id.ToString());
                 if (check != null)
                 {
-                    string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ACTION\":\"REG_PAYMENT\",\"PAY_ITOG\":\"" + check.Price * 100 + "\",\"PAY_NAME\":\"" + check.UslugaName + "\"}");
-                    string resultLink = getValueFromJson("\"PAY_URL\":\"", answer, "\"");
-                    check.PayId = long.Parse(getValueFromJson("\"PAY_ID\":\"", answer, "\""));
-                    resultLink = resultLink.Replace("\\", "");
-                    bd.SaveChanges();
-                    return resultLink;
+                    if (!check.PaymentStatus)
+                    {
+                        string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ACTION\":\"REG_PAYMENT\",\"PAY_ITOG\":\"" + check.Price * 100 + "\",\"PAY_NAME\":\"" + check.UslugaName + "\"}");
+                        string resultLink = getValueFromJson("\"PAY_URL\":\"", answer, "\"");
+                        check.PayId = long.Parse(getValueFromJson("\"PAY_ID\":\"", answer, "\""));
+                        resultLink = resultLink.Replace("\\", "");
+                        bd.SaveChanges();
+                        return resultLink;
+                    }
+                    else return "paid";
                 }
                 else return null;
             }
