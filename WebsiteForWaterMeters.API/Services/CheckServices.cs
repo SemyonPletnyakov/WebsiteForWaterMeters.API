@@ -28,9 +28,9 @@ namespace WebsiteForWaterMeters.API.Services
             Person person = bd.Persons.FirstOrDefault(p=>p.Id==id);
             if (person != null)
             {
-                int hash = (person.Id + Math.Truncate(person.Сounter1) + DateTime.Now.ToString("Ru-ru")).GetHashCode();
-                string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ID\": \""+ hash +"\",\"PAY_ACTION\": \"REG\",\"PAY_DATE\": \""+ DateTime.Now.ToString("Ru-ru") + "\",\"PAY_EMAIL\": \"\",\"PAY_LS\": \""+person.Id+"\",\"PAY_ITOG\":\""+ Math.Truncate(person.Сounter1) + "\",\"PAY_NAME\": \"Оплата водопотребления л/с "+person.Id+"\"}");
-                answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ID\": \"" + hash + "\",\"PAY_ACTION\": \"GET_INFO\"}");
+                int hash = (person.Id + person.Сounter1 * 100 /*+ DateTime.Now.ToString("Ru-ru")*/).GetHashCode();
+                wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ID\": \""+ hash +"\",\"PAY_ACTION\": \"REG\",\"PAY_DATE\": \""+ DateTime.Now.ToString("Ru-ru") + "\",\"PAY_EMAIL\": \"\",\"PAY_LS\": \""+person.Id+"\",\"PAY_ITOG\":\""+ person.Сounter1*100 + "\",\"PAY_NAME\": \"Оплата водопотребления л/с "+person.Id+"\"}");
+                string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ID\": \"" + hash + "\",\"PAY_ACTION\": \"GET_INFO\"}");
                 Check check = bd.Checks.FirstOrDefault(c => c.Id == hash);
                 if (check == null)
                 {
@@ -48,7 +48,8 @@ namespace WebsiteForWaterMeters.API.Services
                         FP = getValueFromJson("\"fp\\\":\\\"", answer, "\\\""),
                         LS = getValueFromJson("\"lsc\":\"", answer, "\""),
                         UslugaName = getValueFromJson("s:59:\\\"", answer, "\\\"").Replace("\\",""),
-                        Price = Math.Truncate(person.Сounter1).ToString()
+                        Price = person.Сounter1,
+                        PaymentStatus = false
                     };
                     bd.Checks.Add(check);
                     bd.SaveChanges();
@@ -62,9 +63,43 @@ namespace WebsiteForWaterMeters.API.Services
             if (hash!=0)
             {
                 Check check = bd.Checks.FirstOrDefault(c=>c.Id == hash);
-                return check;
+                if (check != null)
+                {
+                    if (!check.PaymentStatus)
+                    {
+                        string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ACTION\":\"GET_PAYMENT_INFO\",\"PAY_ID\":\""+check.PayId+"\"}");
+                        string result = getValueFromJson("\"textstatus\":\"", answer, "\"");
+                        if (result == "APPROVED")
+                        {
+                            check.PaymentStatus = true;
+                            bd.SaveChanges();
+                        }
+                    }
+                    return check;
+                }
             }
-            else return null;
+            return null;
+        }
+        public string GetPaymentLink(int id)
+        {
+            try
+            {
+                Check check = bd.Checks.FirstOrDefault(c => c.LS == id.ToString());
+                if (check != null)
+                {
+                    string answer = wc.DownloadString("https://pay.pay-ok.org/demo/?REQ={\"PAY_ACTION\":\"REG_PAYMENT\",\"PAY_ITOG\":\"" + check.Price * 100 + "\",\"PAY_NAME\":\"" + check.UslugaName + "\"}");
+                    string resultLink = getValueFromJson("\"PAY_URL\":\"", answer, "\"");
+                    check.PayId = long.Parse(getValueFromJson("\"PAY_ID\":\"", answer, "\""));
+                    resultLink = resultLink.Replace("\\", "");
+                    bd.SaveChanges();
+                    return resultLink;
+                }
+                else return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

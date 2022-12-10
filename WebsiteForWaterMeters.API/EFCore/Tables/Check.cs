@@ -21,6 +21,8 @@ namespace WebsiteForWaterMeters.API.EFCore.Tables
         public string FP { get; set; }
         public string LS { get; set; }
         public string UslugaName { get; set; }
-        public string Price { get; set; }
+        public double Price { get; set; }
+        public bool PaymentStatus { get; set; }
+        public long PayId { get; set; }
     }
 }

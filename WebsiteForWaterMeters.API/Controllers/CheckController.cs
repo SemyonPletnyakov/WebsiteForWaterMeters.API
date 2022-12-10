@@ -18,7 +18,6 @@ namespace WebsiteForWaterMeters.API.Controllers
         {
             checkServices = cs;
         }
-        //тест коммент 2
         [HttpPost]
         public int? RegisterCheck(int id)
         {
@@ -34,6 +33,14 @@ namespace WebsiteForWaterMeters.API.Controllers
             Response.Headers["Access-Control-Allow-Headers"] = "*";
 
             return checkServices.GetCheck(hash);
+        }
+        [HttpGet("PaymentLink")]
+        public string GetPaymentLink(int id)
+        {
+            Response.Headers["Access-Control-Allow-Origin"] = "*";
+            Response.Headers["Access-Control-Allow-Headers"] = "*";
+
+            return checkServices.GetPaymentLink(id);
         }
     }
 }
