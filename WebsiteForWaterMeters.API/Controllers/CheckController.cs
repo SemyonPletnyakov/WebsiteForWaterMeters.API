@@ -18,7 +18,7 @@ namespace WebsiteForWaterMeters.API.Controllers
         {
             checkServices = cs;
         }
-        //тест коммент
+        //тест коммент 2
         [HttpPost]
         public int? RegisterCheck(int id)
         {
